@@ -6,14 +6,14 @@ import random
 i = 1
 ImagesIndex = random.sample(range(1560), 50)
 
-ListaDeFotos = os.listdir("Photos")
+ListaDeFotos = os.listdir("Base_Images")
 
-for IMG_Path_Index in ImagesIndex:
-    print(i)
-    example = cv2.imread(f"Photos/{ListaDeFotos[IMG_Path_Index]}")
+for IMG_Path_Index in range(1560):
+    print(IMG_Path_Index)
+    example = cv2.imread(f"Base_Images/{ListaDeFotos[IMG_Path_Index]}")
 
-    cv2.imshow("", example)
-    cv2.waitKey(100)
+    # cv2.imshow("", example)
+    # cv2.waitKey(100)
 
     Final_Size_X = 380
     Final_Size_Y = 640
@@ -29,12 +29,8 @@ for IMG_Path_Index in ImagesIndex:
 
     example2 = example[DimX_Start:DimX_End, DimY_Start:DimY_End]
 
-    cv2.imshow("", example2)
-    cv2.waitKey(100)
+    #   cv2.imshow("", example2)
+    #   cv2.waitKey(100)
     cv2.imwrite(f"Sampled Images/{ListaDeFotos[IMG_Path_Index]}", example2)
-    i = i + 1
-
-    if (i == 50):
-        break
 
 print("OK")

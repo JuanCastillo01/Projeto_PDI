@@ -2,11 +2,11 @@ import numpy as np
 import os
 import cv2
 
-def segmentImage(quantifiedImage):
+def segmentImage(quantifiedImage,kernel_dim):
     gray = cv2.cvtColor(quantifiedImage, cv2.COLOR_BGR2GRAY)
     ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-    kernel = np.ones((3, 3), np.uint8)
+    kernel = np.ones((kernel_dim, kernel_dim), np.uint8)
     # sure background area
     sure_bg = cv2.dilate(thresh, kernel, 5)
     # Finding sure foreground area
@@ -28,17 +28,20 @@ def segmentImage(quantifiedImage):
 
     return quantifiedImage
 
+
 # Lista de arquivos na pasta
 samples = os.listdir("Quantified Photos")
-
+k = 9
 # Opera todos os arquivos na pasta
 for path in samples:
 
-    quantifiedImg = cv2.imread(f"Quantified Photos/{path}")
+    if path.startswith("K10"):
 
-    segmentedImage = segmentImage(quantifiedImg)
+        quantifiedImg = cv2.imread(f"Quantified Photos/{path}")
 
-    cv2.imshow(path, segmentedImage)
-    cv2.waitKey(0)
+        segmentedImage = segmentImage(quantifiedImg,k)
 
-    cv2.imwrite(f"Quantified Photos/{path}", segmentedImage)
+        #   cv2.imshow(path, segmentedImage)
+        #   cv2.waitKey(0)
+
+        cv2.imwrite(f"SEGMENTED/{k}_{path}", segmentedImage)

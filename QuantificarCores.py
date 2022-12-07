@@ -19,11 +19,14 @@ samples = os.listdir("Sampled Images")
 
 # Opera todos os arquivos na pasta
 for path in samples:
-    etapaA = cv2.imread(f"Sampled Images/{path}")
-    # cv2.imshow(path, etapaA)
-    # cv2.waitKey(10)
+    if not path.startswith("Sick"):
+        continue
 
-    k = 15
+    etapaA = cv2.imread(f"Sampled Images/{path}")
+    #   cv2.imshow(path, etapaA)
+    #   cv2.waitKey(10)
+
+    k = 10
     output = clr_Quant(etapaA, k)
 
     # cv2.imshow(path, output)
