@@ -24,7 +24,8 @@ def distancia_tridimensional(tupleA, tupleB):
         for ax2 in ax1:
             temp.append(int(ax2))
         ouput.append(temp)
-    soma = ((ouput[0][0]-ouput[1][0])**2) +((ouput[0][1]-ouput[1][1])**2) +((ouput[0][2]-ouput[1][2])**2)
+    soma = ((ouput[0][0]-ouput[1][0])**2) + ((ouput[0][1] -
+                                              ouput[1][1])**2) + ((ouput[0][2]-ouput[1][2])**2)
     return np.sqrt(soma)
 
 
@@ -34,7 +35,8 @@ def QUANTIFICAR(image, k):
     i = np.float32(image).reshape(-1, 3)
 
     #   Seleciona os ponto medio de k intervalos de pixels na imagem
-    ret, label, center = cv2.kmeans(i, k, None, (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0), 10, cv2.KMEANS_RANDOM_CENTERS)
+    ret, label, center = cv2.kmeans(i, k, None, (cv2.TERM_CRITERIA_EPS +
+                                    cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0), 10, cv2.KMEANS_RANDOM_CENTERS)
 
     #   Trasforma saida center em um tipo apropiado para imagens
     center = np.uint8(center)
@@ -49,16 +51,18 @@ def QUANTIFICAR(image, k):
     return qnt_Image, cls_Map
 
 
-def SEGMENTAR(quantifiedImage,kernel_dim):
+def SEGMENTAR(quantifiedImage, kernel_dim):
     gray = cv2.cvtColor(quantifiedImage, cv2.COLOR_BGR2GRAY)
-    ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    ret, thresh = cv2.threshold(
+        gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     kernel = np.ones((kernel_dim, kernel_dim), np.uint8)
     # sure background area
     sure_bg = cv2.dilate(thresh, kernel, 5)
     # Finding sure foreground area
     dist_transform = cv2.distanceTransform(thresh, cv2.DIST_L2, 5)
-    ret, sure_fg = cv2.threshold(dist_transform, 0.4 * dist_transform.max(), 255, 0)
+    ret, sure_fg = cv2.threshold(
+        dist_transform, 0.4 * dist_transform.max(), 255, 0)
     # Finding unknown region
     sure_fg = np.uint8(sure_fg)
     unknown = cv2.subtract(sure_bg, sure_fg)
@@ -76,43 +80,92 @@ def SEGMENTAR(quantifiedImage,kernel_dim):
     return quantifiedImage
 
 
+def euclidianDistance(p1, p2):
+    return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+
+
+def calcMeanPosition(points):
+    x = 0
+    y = 0
+    for point in points:
+        x += point[0]
+        y += point[1]
+    return [x / len(points), y / len(points)]
+
+
+def calcSt(points, mean_point):
+    st = 0
+    for point in points:
+        st += euclidianDistance(point, mean_point) ** 2
+    return st
+
+
+def calcSw(classMap):
+    sw = 0
+    classToPixelsMap = calcClassToPixelsMap(classMap)
+    for colorClass, pixels in classToPixelsMap.items():
+        mean = calcMeanPosition(pixels)
+        sw += calcSt(pixels, mean)
+    return sw
+
+
+def calcClassToPixelsMap(classMap):
+    classToPixelsMap = {}
+    for row_idx in range(len(classMap)):
+        for col_idx in range(len(classMap[row_idx])):
+            colorClass = classMap[row_idx][col_idx]
+            list_of_pixels = classToPixelsMap[colorClass] = classToPixelsMap.get(
+                colorClass, [])
+            list_of_pixels.append([row_idx, col_idx])
+    return classToPixelsMap
+
+
+def calcListOfPixelsPositions(img):
+    listOfPixels = []
+    for row_idx in range(len(img)):
+        for col_idx in range(len(img[row_idx])):
+            listOfPixels.append([row_idx, col_idx])
+    return listOfPixels
+
+
+def calcClassToColorMap(quantizedImage, classMap):
+    classToColorMap = {}
+    for row_idx in range(len(classMap)):
+        for col_idx in range(len(classMap[row_idx])):
+            classToColorMap[classMap[row_idx][col_idx]
+                            ] = quantizedImage[row_idx][col_idx]
+    return classToColorMap
+
+
+def calcClassToPixelQuantityMap(classMap):
+    classToPixelQuantityMap = {}
+    for row_idx in range(len(classMap)):
+        for col_idx in range(len(classMap[row_idx])):
+            classToPixelQuantityMap[classMap[row_idx][col_idx]] = classToPixelQuantityMap.get(
+                classMap[row_idx][col_idx], 0) + 1
+    return classToPixelQuantityMap
+
+
+def centerCoordinates(img):
+    height, width, _ = img.shape
+    return (int(width/2), int(height/2))
+
+
+def getWindow(img, x, y, width, height):
+    for x_offset in range(width):
+        for y_offset in range(height):
+            yield img[x + x_offset][y + y_offset]
+
+
 def J_IMAGE(Quantized_Image, ClassMap):
-    #   Imagem J
-    jImage = []
-    #   Numero de Instancias de cada classe
-    ArrayClassMean = []
-    #   Array com de classes em ordem
-    ArrayClass = list(ClassMap.flatten())
-    #   Numero de cores no mapa
-    k = len(np.unique(ArrayClass))
-    #   Cor media na imagem
-    mean = np.average(np.average(Quantized_Image, axis=0), axis=0)
 
-    # Calcula a media dos de cada Classe
-    for f in range(k):
-        soma = [0, 0, 0]
-        total = ArrayClass.count(f)
-        for g in range(len(ClassMap)):
-            for h in range(len(ClassMap[g])):
-                if f == ClassMap[g][h]:
-                    px_color = Quantized_Image[g][h]
-                    soma = soma_Distancias(px_color, soma)
-        ArrayClassMean.append([soma[0]/total, (soma[1])/total, soma[2]/total])
+    st = calcSt(ClassMap, centerCoordinates(Quantized_Image))
+    sw = calcSw(ClassMap)
 
-    #   Arrays com ST e SW para cada pixel
-    for l in range(len(ClassMap)):
-        for m in range(len(ClassMap[l])):
-            # Imagem ST para cada pixel
-            ST_Image = []
-            #   Imagem SW para cada pixel
-            SW_Image = []
-            for z in range(len(ClassMap)):
-                for y in range(len(ClassMap[z])):
-                    ST_Image.append(distancia_tridimensional(Quantized_Image[z][y], mean) ** 2)
+    j = (st - sw)/sw
 
-                    SW_Image.append(distancia_tridimensional(Quantized_Image[z][y], ArrayClassMean[ClassMap[l][m]]) ** 2)
+    print('st', st)
+    print('sw', sw)
+    print('j', j)
 
-            ST = sum(ST_Image)
-            jImage.append(0)
-
-    return np.array(jImage).reshape(ClassMap.shape)
+    exit()
