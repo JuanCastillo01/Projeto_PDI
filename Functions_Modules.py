@@ -77,17 +77,18 @@ def SEGMENTAR(quantifiedImage,kernel_dim):
 
 
 def J_IMAGE(Quantized_Image, ClassMap):
+    #   Imagem J
+    jImage = []
+    #   Numero de Instancias de cada classe
+    ArrayClassMean = []
+    #   Array com de classes em ordem
     ArrayClass = list(ClassMap.flatten())
-
     #   Numero de cores no mapa
     k = len(np.unique(ArrayClass))
     #   Cor media na imagem
     mean = np.average(np.average(Quantized_Image, axis=0), axis=0)
 
-    #   Numero de Instancias de cada classe
-
-    ArrayClassMean = []
-
+    # Calcula a media dos de cada Classe
     for f in range(k):
         soma = [0, 0, 0]
         total = ArrayClass.count(f)
@@ -98,16 +99,20 @@ def J_IMAGE(Quantized_Image, ClassMap):
                     soma = soma_Distancias(px_color, soma)
         ArrayClassMean.append([soma[0]/total, (soma[1])/total, soma[2]/total])
 
-    #   imagem J
-    jImage = []
+    #   Arrays com ST e SW para cada pixel
+    for l in range(len(ClassMap)):
+        for m in range(len(ClassMap[l])):
+            # Imagem ST para cada pixel
+            ST_Image = []
+            #   Imagem SW para cada pixel
+            SW_Image = []
+            for z in range(len(ClassMap)):
+                for y in range(len(ClassMap[z])):
+                    ST_Image.append(distancia_tridimensional(Quantized_Image[z][y], mean) ** 2)
 
-    for j, row in enumerate(ClassMap):
-        for k, pixel in enumerate(row):
-            i = ClassMap[j][k]
-            px_color = Quantized_Image[j][k]
-            st = distancia_tridimensional(px_color, mean)**2
-            sw = distancia_tridimensional(px_color, ArrayClassMean[i])**2
-            j_px_val = (st-sw)/sw
-            jImage.append(j_px_val)
+                    SW_Image.append(distancia_tridimensional(Quantized_Image[z][y], ArrayClassMean[ClassMap[l][m]]) ** 2)
+
+            ST = sum(ST_Image)
+            jImage.append(0)
 
     return np.array(jImage).reshape(ClassMap.shape)
