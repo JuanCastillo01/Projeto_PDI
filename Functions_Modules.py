@@ -147,25 +147,58 @@ def calcClassToPixelQuantityMap(classMap):
 
 
 def centerCoordinates(img):
-    height, width, _ = img.shape
-    return (int(width/2), int(height/2))
+    height = len(img)
+    width = len(img[0])
+    return [height / 2, width / 2]
 
 
 def getWindow(img, x, y, width, height):
-    for x_offset in range(width):
-        for y_offset in range(height):
-            yield img[x + x_offset][y + y_offset]
+    window = []
+    for x_offset in range(width - 1):
+        window.append([])
+        for y_offset in range(height - 1):
+            window[x_offset].append(img[x + x_offset][y + y_offset])
+    return window
 
 
-def J_IMAGE(Quantized_Image, ClassMap):
+def getWindows(img, width, height):
+    windows = []
+    row = 0
+    image_width, image_height = img.shape
+    for x in range(0, image_width - width, width):
+        windows.append([])
+        for y in range(0, image_height - height, height):
+            windows[row].append(getWindow(img, x, y, width, height))
+        row += 1
+    return windows
 
-    st = calcSt(ClassMap, centerCoordinates(Quantized_Image))
+
+def J_LOCAL(ClassMap):
+
+    st = calcSt(ClassMap, centerCoordinates(ClassMap))
     sw = calcSw(ClassMap)
 
     j = (st - sw)/sw
 
-    print('st', st)
-    print('sw', sw)
-    print('j', j)
+    return j
 
-    exit()
+
+def J_IMAGE(classMap, windowSize):
+    windows = getWindows(classMap, windowSize, windowSize)
+
+    jImage = []
+
+    for row_idx in range(len(windows)):
+        jImage.append([])
+        for col_idx in range(len(windows[row_idx])):
+            jImage[row_idx].append(J_LOCAL(windows[row_idx][col_idx]))
+
+    return jImage
+
+
+def J_IMAGE_TO_GREYSCALE(jImage):
+    jImage = np.array(jImage)
+    jImage = jImage + 1
+    jImage = jImage * 255
+    jImage = jImage.astype(np.uint8)
+    return jImage
